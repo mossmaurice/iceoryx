@@ -407,8 +407,7 @@ TEST_F(Timer_test, GetOverrunsFailsWithNoCallback)
     EXPECT_THAT(call.get_error(), Eq(TimerError::TIMER_NOT_INITIALIZED));
 }
 
-TEST_F(Timer_test, CallableOvertakingPeridicityLeadsToTermination)
-{
+TIMING_TEST_F(Timer_test, CallableOvertakingPeridicityLeadsToTermination, Repeat(5), [&] {
     Timer sut(10_ms, [] { std::this_thread::sleep_for(std::chrono::milliseconds(100)); });
     EXPECT_DEATH({}, ".*");
-}
+});
