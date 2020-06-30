@@ -165,8 +165,6 @@ class Timer
         /// @note This call is wrapped in a plain C function
         void executeCallback() noexcept;
 
-
-      private:
         /// @brief Duration after the timer calls the user-defined callback function
         units::Duration m_timeToWait;
 
@@ -181,6 +179,8 @@ class Timer
         /// @todo will be obsolete with creation pattern
         /// @brief Bool that signals whether the object is fully initalized
         bool m_isInitialized{false};
+
+        std::atomic_bool m_isCallbackRunning{false};
 
         /// @todo creation pattern
         /// @brief If an error happened during creation the value is stored in here

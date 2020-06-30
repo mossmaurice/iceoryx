@@ -75,7 +75,6 @@ void Timer::OsTimer::callbackHelper(sigval data)
         return;
     }
 
-    std::lock_guard<std::mutex> lock(callbackHandle.m_accessMutex);
     if (!callbackHandle.m_inUse.load(std::memory_order::memory_order_relaxed))
     {
         return;
@@ -94,7 +93,18 @@ void Timer::OsTimer::callbackHelper(sigval data)
     /// @todo cxx::expect
     if (callbackHandle.m_timer != nullptr)
     {
-        callbackHandle.m_timer->executeCallback();
+        if (callbackHandle.m_timer->m_isCallbackRunning)
+        {
+#if defined(NDEBUG)
+            std::cerr << "Callable, passed to the POSIX timer, took longer than periodicity" << std::endl;
+            std::terminate();
+#endif
+        }
+        else
+        {
+            std::lock_guard<std::mutex> lock(callbackHandle.m_accessMutex);
+            callbackHandle.m_timer->executeCallback();
+        }
     }
 }
 
@@ -201,6 +211,8 @@ Timer::OsTimer::~OsTimer() noexcept
 
 void Timer::OsTimer::executeCallback() noexcept
 {
+    m_isCallbackRunning.store(true, std::memory_order_relaxed);
+
     if (m_isInitialized && m_callback)
     {
         m_callback();
@@ -211,6 +223,8 @@ void Timer::OsTimer::executeCallback() noexcept
         // temporary?
         errorHandler(Error::kPOSIX_TIMER__FIRED_TIMER_BUT_STATE_IS_INVALID);
     }
+
+    m_isCallbackRunning.store(false, std::memory_order_relaxed);
 }
 
 cxx::expected<TimerError> Timer::OsTimer::start(const RunMode runMode) noexcept
